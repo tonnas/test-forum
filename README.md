@@ -11,3 +11,5 @@ php yii migrate
 
 php yii serve 0.0.0.0
 ~~~
+
+Login as name: 'admin' & password:'admin' to be able to use admin
