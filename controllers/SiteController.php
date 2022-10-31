@@ -2,20 +2,21 @@
 
 namespace app\controllers;
 
+use app\models\Comment;
 use Yii;
 use yii\filters\AccessControl;
 use yii\web\Controller;
 use yii\web\Response;
 use yii\filters\VerbFilter;
 use app\models\LoginForm;
-use app\models\ContactForm;
+use app\models\Article;
 
 class SiteController extends Controller
 {
     /**
-     * {@inheritdoc}
+     * @return array[]
      */
-    public function behaviors()
+    public function behaviors(): array
     {
         return [
             'access' => [
@@ -39,35 +40,60 @@ class SiteController extends Controller
     }
 
     /**
-     * {@inheritdoc}
+     * @return array
      */
-    public function actions()
+    public function actions(): array
     {
         return [
             'error' => [
                 'class' => 'yii\web\ErrorAction',
             ],
-            'captcha' => [
-                'class' => 'yii\captcha\CaptchaAction',
-                'fixedVerifyCode' => YII_ENV_TEST ? 'testme' : null,
-            ],
         ];
     }
 
     /**
-     * Displays homepage.
-     *
      * @return string
      */
-    public function actionIndex()
+    public function actionIndex(): string
     {
-        return $this->render('index');
+        $article = Article::first();
+        $commentModel = new Comment();
+        $comments = Comment::findAll([
+            'article_id' => Article::FIRST_ARTICLE_ID,
+            'parent_id' => null,
+        ]);
+
+        if ($commentModel->saveComment()) {
+            $this->refresh();
+        }
+
+        return $this->render('index', [
+            'commentModel' => $commentModel,
+            'article' => $article,
+            'comments' => $comments,
+            'commentsCount' => Comment::find()->where(['article_id' => Article::FIRST_ARTICLE_ID])->count(),
+        ]);
     }
 
     /**
-     * Login action.
-     *
-     * @return Response|string
+     * @param $parentId
+     * @return string
+     */
+    public function actionComment($parentId = null): string
+    {
+        $commentModel = new Comment();
+
+        if ($commentModel->saveComment($parentId)) {
+            $this->redirect('index');
+        }
+
+        return $this->renderAjax('commentForm', [
+           'commentModel' => $commentModel,
+        ]);
+    }
+
+    /**
+     * @return string|Response
      */
     public function actionLogin()
     {
@@ -77,7 +103,7 @@ class SiteController extends Controller
 
         $model = new LoginForm();
         if ($model->load(Yii::$app->request->post()) && $model->login()) {
-            return $this->goBack();
+            return $this->redirect('/admin');
         }
 
         $model->password = '';
@@ -87,42 +113,12 @@ class SiteController extends Controller
     }
 
     /**
-     * Logout action.
-     *
      * @return Response
      */
-    public function actionLogout()
+    public function actionLogout(): Response
     {
         Yii::$app->user->logout();
 
         return $this->goHome();
-    }
-
-    /**
-     * Displays contact page.
-     *
-     * @return Response|string
-     */
-    public function actionContact()
-    {
-        $model = new ContactForm();
-        if ($model->load(Yii::$app->request->post()) && $model->contact(Yii::$app->params['adminEmail'])) {
-            Yii::$app->session->setFlash('contactFormSubmitted');
-
-            return $this->refresh();
-        }
-        return $this->render('contact', [
-            'model' => $model,
-        ]);
-    }
-
-    /**
-     * Displays about page.
-     *
-     * @return string
-     */
-    public function actionAbout()
-    {
-        return $this->render('about');
     }
 }
