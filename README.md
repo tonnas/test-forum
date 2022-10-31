@@ -1,5 +1,7 @@
 Discussion
 
+PHP 8
+
 Set DB name and password in `config/db.php`
 
 ~~~
